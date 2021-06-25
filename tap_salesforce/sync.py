@@ -117,6 +117,7 @@ def sync_records(sf, catalog_entry, state, counter, state_msg_threshold):
 
     LOGGER.info('Syncing Salesforce data for stream %s', stream)
 
+    max_replication_key_value = None
     for rec in sf.query(catalog_entry, state):
         counter.increment()
         with Transformer(pre_hook=transform_bulk_data_hook) as transformer:
@@ -131,6 +132,9 @@ def sync_records(sf, catalog_entry, state, counter, state_msg_threshold):
                 time_extracted=start_time))
 
         replication_key_value = replication_key and singer_utils.strptime_with_tz(rec[replication_key])
+
+        if max_replication_key_value is None or rec[replication_key] > max_replication_key_value:
+            max_replication_key_value = rec[replication_key]
 
         if sf.pk_chunking:
             if replication_key_value and replication_key_value <= start_time and replication_key_value > chunked_bookmark:
@@ -147,11 +151,19 @@ def sync_records(sf, catalog_entry, state, counter, state_msg_threshold):
         # Before writing a bookmark, make sure Salesforce has not given us a
         # record with one outside our range
         elif replication_key_value and replication_key_value <= start_time:
-            state = singer.write_bookmark(
-                state,
-                catalog_entry['tap_stream_id'],
-                replication_key,
-                rec[replication_key])
+            # For BULK_V2, we keep the state of the record with the latest replication_key value
+            if sf.api_type == 'BULK_V2':
+                state = singer.write_bookmark(
+                    state,
+                    catalog_entry['tap_stream_id'],
+                    replication_key,
+                    max_replication_key_value)
+            else:
+                state = singer.write_bookmark(
+                    state,
+                    catalog_entry['tap_stream_id'],
+                    replication_key,
+                    rec[replication_key])
 
             if counter.value % state_msg_threshold == 0:
                 singer.write_state(state)
