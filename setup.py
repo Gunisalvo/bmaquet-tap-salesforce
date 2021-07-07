@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='bmaquet-tap-salesforce',
-      version='0.0.1',
+      version='0.0.6',
       description='Singer.io tap for extracting data from the Salesforce API',
       author='bmaquet',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
