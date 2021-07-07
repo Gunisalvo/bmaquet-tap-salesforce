@@ -6,12 +6,12 @@
 
 [Singer](https://www.singer.io/) tap that extracts data from a [Salesforce](https://www.salesforce.com/) Account and produces JSON-formatted data following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
 
-This is a forked version of [tap-salesforce (v1.4.24)](https://github.com/singer-io/tap-salesforce) that maintained by the Meltano team.
+This is a forked version of [tap-salesforce (meltano.1.4.27)](https://gitlab.com/meltano/tap-salesforce) that maintained by [bmaquet](https://github.com/BenjMaq).
 
-Main differences from the original version:
+Main differences from the Meltano version:
 
-- Support for `username/password/security_token` authentication
-- Support for concurrent execution (8 threads by default) when accessing different API endpoints to speed up the extraction process
+- Support a new `OAuthPasswordCredentials` authentication which uses a combination of `username`, `password`, `client_id`, and `client_secret`.
+- Support Salesforce BULK API V2
 
 # Quickstart
 
@@ -50,6 +50,17 @@ pip install git+https://gitlab.com/meltano/tap-salesforce.git
   "username": "Account Email",
   "password": "Account Password",
   "security_token": "Security Token",
+}
+```
+
+**Required for OAuth username/password based authentication**
+```
+{
+  "username": "Account Email",
+  "password": "Account Password",
+  "security_token": "Security Token",
+  "client_id": "secret_client_id",
+  "client_secret": "secret_client_secret"
 }
 ```
 
