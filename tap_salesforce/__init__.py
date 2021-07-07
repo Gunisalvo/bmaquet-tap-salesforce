@@ -174,19 +174,17 @@ def do_discover(sf):
             if field_name == "Id":
                 found_id_field = True
 
-            property_schema, mdata = create_property_schema(
-                f, mdata)
+            property_schema, mdata = create_property_schema(f, mdata)
 
             # Compound Address fields cannot be queried by the Bulk API
-            if f['type'] == "address" and sf.api_type == tap_salesforce.salesforce.BULK_API_TYPE:
-                unsupported_fields.add(
-                    (field_name, 'cannot query compound address fields with bulk API'))
+            if (f['type'] == "address" and sf.api_type in (
+                    tap_salesforce.salesforce.BULK_API_TYPE, tap_salesforce.salesforce.BULK_V2_API_TYPE)):
+                unsupported_fields.add((field_name, 'cannot query compound address fields with bulk API'))
 
             # we haven't been able to observe any records with a json field, so we
             # are marking it as unavailable until we have an example to work with
             if f['type'] == "json":
-                unsupported_fields.add(
-                    (field_name, 'do not currently support json fields - please contact support'))
+                unsupported_fields.add((field_name, 'do not currently support json fields - please contact support'))
 
             # Blacklisted fields are dependent on the api_type being used
             field_pair = (sobject_name, field_name)
@@ -194,18 +192,15 @@ def do_discover(sf):
                 unsupported_fields.add(
                     (field_name, sf.get_blacklisted_fields()[field_pair]))
 
-            inclusion = metadata.get(
-                mdata, ('properties', field_name), 'inclusion')
+            inclusion = metadata.get(mdata, ('properties', field_name), 'inclusion')
 
             if sf.select_fields_by_default and inclusion != 'unsupported':
-                mdata = metadata.write(
-                    mdata, ('properties', field_name), 'selected-by-default', True)
+                mdata = metadata.write(mdata, ('properties', field_name), 'selected-by-default', True)
 
             properties[field_name] = property_schema
 
         if replication_key:
-            mdata = metadata.write(
-                mdata, ('properties', replication_key), 'inclusion', 'automatic')
+            mdata = metadata.write(mdata, ('properties', replication_key), 'inclusion', 'automatic')
 
         # There are cases where compound fields are referenced by the associated
         # subfields but are not actually present in the field list

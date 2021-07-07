@@ -8,6 +8,7 @@ import singer.utils as singer_utils
 from singer import metadata, metrics
 
 from tap_salesforce.salesforce.bulk import Bulk
+from tap_salesforce.salesforce.bulk_V2 import BulkV2
 from tap_salesforce.salesforce.rest import Rest
 from tap_salesforce.salesforce.exceptions import (
     TapSalesforceException,
@@ -19,6 +20,9 @@ LOGGER = singer.get_logger()
 
 BULK_API_TYPE = "BULK"
 REST_API_TYPE = "REST"
+BULK_V2_API_TYPE = "BULK_V2"
+API_VERSION = '41.0'
+BULK_V2_API_VERSION = '51.0'
 
 STRING_TYPES = set([
     'id',
@@ -35,6 +39,11 @@ STRING_TYPES = set([
     'complexvalue',  # TODO: Unverified
     'masterrecord',
     'datacategorygroupreference'
+])
+
+INTEGER_TYPES = set([
+    'int',
+    'long'
 ])
 
 NUMBER_TYPES = set([
@@ -155,7 +164,7 @@ def field_to_property_schema(field, mdata):
             "latitude": {"type": ["null", "number"]},
             "geocodeAccuracy": {"type": ["null", "string"]}
         }
-    elif sf_type == "int":
+    elif sf_type in INTEGER_TYPES:
         property_schema['type'] = "integer"
     elif sf_type == "time":
         property_schema['type'] = "string"
@@ -209,7 +218,7 @@ class Salesforce():
         self.default_start_date = default_start_date
         self.rest_requests_attempted = 0
         self.jobs_completed = 0
-        self.data_url = "{}/services/data/v41.0/{}"
+        self.data_url = "{}/services/data/v{}/{}"
         self.pk_chunking = False
 
         self.auth = SalesforceAuth.from_credentials(credentials, is_sandbox=self.is_sandbox)
@@ -283,14 +292,15 @@ class Salesforce():
         """Describes all objects or a specific object"""
         headers = self.auth.rest_headers
         instance_url = self.auth.instance_url
+        version = API_VERSION if self.api_type != BULK_V2_API_TYPE else BULK_V2_API_VERSION
         if sobject is None:
             endpoint = "sobjects"
             endpoint_tag = "sobjects"
-            url = self.data_url.format(instance_url, endpoint)
+            url = self.data_url.format(instance_url, version, endpoint)
         else:
             endpoint = "sobjects/{}/describe".format(sobject)
             endpoint_tag = sobject
-            url = self.data_url.format(instance_url, endpoint)
+            url = self.data_url.format(instance_url, version, endpoint)
 
         with metrics.http_request_timer("describe") as timer:
             timer.tags['endpoint'] = endpoint_tag
@@ -335,7 +345,7 @@ class Salesforce():
                 end_date_clause = ""
 
             order_by = " ORDER BY {} ASC".format(replication_key)
-            if order_by_clause:
+            if order_by_clause and self.api_type != BULK_V2_API_TYPE:
                 return query + where_clause + end_date_clause + order_by
 
             return query + where_clause + end_date_clause
@@ -349,29 +359,32 @@ class Salesforce():
         elif self.api_type == REST_API_TYPE:
             rest = Rest(self)
             return rest.query(catalog_entry, state)
+        elif self.api_type == BULK_V2_API_TYPE:
+            bulkV2 = BulkV2(self)
+            return bulkV2.query(catalog_entry, state)
         else:
             raise TapSalesforceException(
-                "api_type should be REST or BULK was: {}".format(
+                "api_type should be REST, BULK or BULK_V2 was: {}".format(
                     self.api_type))
 
     def get_blacklisted_objects(self):
-        if self.api_type == BULK_API_TYPE:
+        if self.api_type in (BULK_API_TYPE, BULK_V2_API_TYPE):
             return UNSUPPORTED_BULK_API_SALESFORCE_OBJECTS.union(
                 QUERY_RESTRICTED_SALESFORCE_OBJECTS).union(QUERY_INCOMPATIBLE_SALESFORCE_OBJECTS)
         elif self.api_type == REST_API_TYPE:
             return QUERY_RESTRICTED_SALESFORCE_OBJECTS.union(QUERY_INCOMPATIBLE_SALESFORCE_OBJECTS)
         else:
             raise TapSalesforceException(
-                "api_type should be REST or BULK was: {}".format(
+                "api_type should be REST, BULK or BULK_V2 was: {}".format(
                     self.api_type))
 
     # pylint: disable=line-too-long
     def get_blacklisted_fields(self):
-        if self.api_type == BULK_API_TYPE:
+        if self.api_type in (BULK_API_TYPE, BULK_V2_API_TYPE):
             return {('EntityDefinition', 'RecordTypesSupported'): "this field is unsupported by the Bulk API."}
         elif self.api_type == REST_API_TYPE:
             return {}
         else:
             raise TapSalesforceException(
-                "api_type should be REST or BULK was: {}".format(
+                "api_type should be REST, BULK or BULK_V2 was: {}".format(
                     self.api_type))

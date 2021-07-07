@@ -20,9 +20,16 @@ PasswordCredentials = namedtuple('PasswordCredentials', (
     "security_token"
 ))
 
+OAuthPasswordCredentials = namedtuple('OAuthPasswordCredentials', (
+    "username",
+    "password",
+    "client_id",
+    "client_secret"
+))
+
 
 def parse_credentials(config):
-    for cls in reversed((OAuthCredentials, PasswordCredentials)):
+    for cls in reversed((OAuthCredentials, PasswordCredentials, OAuthPasswordCredentials)):
         creds = cls(*(config.get(key) for key in cls._fields))
         if all(creds):
             return creds
@@ -63,6 +70,9 @@ class SalesforceAuth():
 
         if isinstance(credentials, PasswordCredentials):
             return SalesforceAuthPassword(credentials, **kwargs)
+
+        if isinstance(credentials, OAuthPasswordCredentials):
+            return SalesforceAuthOAuthPassword(credentials, **kwargs)
 
         raise Exception("Invalid credentials")
 
@@ -118,3 +128,38 @@ class SalesforceAuthPassword(SalesforceAuth):
 
         self._access_token, host = login
         self._instance_url = "https://" + host
+
+
+class SalesforceAuthOAuthPassword(SalesforceAuth):
+
+    @property
+    def _login_body(self):
+        return {'grant_type': 'password', **self._credentials._asdict()}
+
+    @property
+    def _login_url(self):
+        login_url = 'https://login.salesforce.com/services/oauth2/token'
+
+        if self.is_sandbox:
+            login_url = 'https://test.salesforce.com/services/oauth2/token'
+
+        return login_url
+
+    def login(self):
+        try:
+            LOGGER.info("Attempting login via OAuth2 with password")
+            resp = requests.post(self._login_url,
+                                 data=self._login_body,
+                                 headers={"Content-Type": "application/x-www-form-urlencoded"})
+
+            resp.raise_for_status()
+            auth = resp.json()
+
+            LOGGER.info("OAuth2 with password login successful")
+            self._access_token = auth['access_token']
+            self._instance_url = auth['instance_url']
+        except Exception as e:
+            error_message = str(e)
+            if resp:
+                error_message = error_message + ", Response from Salesforce: {}".format(resp.text)
+            raise Exception(error_message) from e
