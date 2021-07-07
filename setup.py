@@ -2,11 +2,10 @@
 
 from setuptools import setup
 
-setup(name='tap-salesforce',
-      version='meltano.1.4.28',
+setup(name='bmaquet-tap-salesforce',
+      version='0.0.1',
       description='Singer.io tap for extracting data from the Salesforce API',
-      author='Stitch',
-      url='https://singer.io',
+      author='bmaquet',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_salesforce'],
       install_requires=[
