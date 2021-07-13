@@ -5,8 +5,8 @@ import time
 import tempfile
 import singer
 from singer import metrics
-from tap_salesforce.salesforce import BULK_V2_API_VERSION
 from tap_salesforce.salesforce.exceptions import (TapSalesforceException)
+from . import BULK_V2_API_VERSION
 
 JOB_STATUS_POLLING_SLEEP = 20
 ITER_CHUNK_SIZE = 1024
