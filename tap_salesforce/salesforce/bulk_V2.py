@@ -5,6 +5,7 @@ import time
 import tempfile
 import singer
 from singer import metrics
+from tap_salesforce.salesforce import BULK_V2_API_VERSION
 from tap_salesforce.salesforce.exceptions import (TapSalesforceException)
 
 JOB_STATUS_POLLING_SLEEP = 20
@@ -15,7 +16,7 @@ LOGGER = singer.get_logger()
 
 class BulkV2:
 
-    bulk_V2_url = "{}/services/data/v51.0/{}"
+    bulk_V2_url = "{}/services/data/v{}/{}"
 
 
     def __init__(self, sf):
@@ -35,7 +36,7 @@ class BulkV2:
         if job_status['state'] in ('Failed', 'Aborted'):
             raise TapSalesforceException(job_status)
         else:
-            url = self.bulk_V2_url.format(self.sf.instance_url, "jobs/query/{}/results".format(job_id))
+            url = self.bulk_V2_url.format(self.sf.instance_url, BULK_V2_API_VERSION, "jobs/query/{}/results".format(job_id))
             headers = self.sf.auth.rest_headers
             resp = self.sf._make_request('GET', url, headers=headers, stream=True)
             resp_headers = resp.headers
@@ -43,7 +44,7 @@ class BulkV2:
                 yield rec
             while resp_headers['Sforce-Locator'] != 'null':
                 url = self.bulk_V2_url.format(
-                    self.sf.instance_url, "jobs/query/{}/results?locator={}".format(job_id, resp_headers['Sforce-Locator'])
+                    self.sf.instance_url, BULK_V2_API_VERSION, "jobs/query/{}/results?locator={}".format(job_id, resp_headers['Sforce-Locator'])
                 )
                 resp = self.sf._make_request('GET', url, headers=headers, stream=True)
                 resp_headers = resp.headers
@@ -74,7 +75,7 @@ class BulkV2:
 
 
     def _get_job_status(self, job_id):
-        url = self.bulk_V2_url.format(self.sf.instance_url, "jobs/query/{}".format(job_id))
+        url = self.bulk_V2_url.format(self.sf.instance_url, BULK_V2_API_VERSION, "jobs/query/{}".format(job_id))
         headers = self.sf.auth.rest_headers
         resp = self.sf._make_request('GET', url, headers=headers)
         resp_json = resp.json()
@@ -82,7 +83,7 @@ class BulkV2:
 
 
     def _create_job(self, catalog_entry, state):
-        url = self.bulk_V2_url.format(self.sf.instance_url, "jobs/query")
+        url = self.bulk_V2_url.format(self.sf.instance_url, BULK_V2_API_VERSION, "jobs/query")
         start_date = self.sf.get_start_date(state, catalog_entry)
         query = self.sf._build_query_string(catalog_entry, start_date)
         body = {"operation": "queryAll", "query": query, "contentType": "CSV"}
