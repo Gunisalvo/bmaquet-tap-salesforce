@@ -22,7 +22,6 @@ BULK_API_TYPE = "BULK"
 REST_API_TYPE = "REST"
 BULK_V2_API_TYPE = "BULK_V2"
 API_VERSION = '41.0'
-BULK_V2_API_VERSION = '51.0'
 
 STRING_TYPES = set([
     'id',
@@ -292,7 +291,7 @@ class Salesforce():
         """Describes all objects or a specific object"""
         headers = self.auth.rest_headers
         instance_url = self.auth.instance_url
-        version = API_VERSION if self.api_type != BULK_V2_API_TYPE else BULK_V2_API_VERSION
+        version = API_VERSION if self.api_type != BULK_V2_API_TYPE else BulkV2.BULK_V2_API_VERSION
         if sobject is None:
             endpoint = "sobjects"
             endpoint_tag = "sobjects"
