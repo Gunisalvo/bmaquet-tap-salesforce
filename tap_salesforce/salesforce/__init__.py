@@ -202,6 +202,7 @@ class Salesforce():
                  is_sandbox=None,
                  select_fields_by_default=None,
                  default_start_date=None,
+                 end_date=None,
                  api_type=None):
         self.api_type = api_type.upper() if api_type else None
         self.session = requests.Session()
@@ -215,6 +216,7 @@ class Salesforce():
         self.is_sandbox = is_sandbox is True or (isinstance(is_sandbox, str) and is_sandbox.lower() == 'true')
         self.select_fields_by_default = select_fields_by_default is True or (isinstance(select_fields_by_default, str) and select_fields_by_default.lower() == 'true')
         self.default_start_date = default_start_date
+        self.end_date = end_date
         self.rest_requests_attempted = 0
         self.jobs_completed = 0
         self.data_url = "{}/services/data/v{}/{}"

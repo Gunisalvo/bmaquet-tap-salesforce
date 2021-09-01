@@ -25,6 +25,7 @@ class BulkV2:
 
 
     def query(self, catalog_entry, state):
+        end_date = catalog_entry
         job_id = self._create_job(catalog_entry, state)
         for result in self._get_job_results(job_id):
             yield result
@@ -85,7 +86,7 @@ class BulkV2:
     def _create_job(self, catalog_entry, state):
         url = self.BULK_V2_URL.format(self.sf.instance_url, self.BULK_V2_API_VERSION, "jobs/query")
         start_date = self.sf.get_start_date(state, catalog_entry)
-        query = self.sf._build_query_string(catalog_entry, start_date)
+        query = self.sf._build_query_string(catalog_entry, start_date, self.sf.end_date)
         body = {"operation": "queryAll", "query": query, "contentType": "CSV"}
         headers = self.sf.auth.rest_headers
         headers["Content-Type"] = "application/json"
