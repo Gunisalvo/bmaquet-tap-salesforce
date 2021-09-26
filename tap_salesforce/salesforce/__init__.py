@@ -349,9 +349,9 @@ class Salesforce():
             if order_by_clause and self.api_type != BULK_V2_API_TYPE:
                 return query + where_clause + end_date_clause + order_by
 
-            return query + where_clause + end_date_clause
+            return query + where_clause + end_date_clause + " LIMIT 200000 "
         else:
-            return query
+            return query + " LIMIT 200000 "
 
     def query(self, catalog_entry, state):
         if self.api_type == BULK_API_TYPE:
